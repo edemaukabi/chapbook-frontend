@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Clock, Eye, Calendar } from "lucide-react";
+import { cookies } from "next/headers";
 import ArticleActions from "@/components/articles/ArticleActions";
 import CommentSection from "@/components/comments/CommentSection";
 import { formatDate } from "@/lib/utils";
@@ -10,25 +11,36 @@ import type { Article } from "@/types";
 
 async function getArticle(slug: string): Promise<Article | null> {
   try {
-    // Use slug as search to find the article, then filter by slug
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/elastic/search/?search=${encodeURIComponent(slug)}&slug=${encodeURIComponent(slug)}`,
+    // Step 1: Find article UUID via Elasticsearch (public endpoint — no auth needed)
+    const searchRes = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/elastic/search/?search=${encodeURIComponent(slug)}`,
       { next: { revalidate: 30 } }
     );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const results = data.results ?? [];
+    if (!searchRes.ok) return null;
+    const searchData = await searchRes.json();
+    const results = searchData.results ?? [];
     const match = results.find((a: { slug: string }) => a.slug === slug);
     if (!match) return null;
 
-    // Fetch full article by ID for complete data
+    // Step 2: Fetch full article by UUID — forward the user's auth cookie so the
+    // backend accepts the request. Works for logged-in users; anonymous users get
+    // a 401 and we fall back to the ES result which has enough data to render.
+    const cookieStore = await cookies();
     const articleRes = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/articles/${match.id}/`,
-      { next: { revalidate: 30 } }
+      {
+        next: { revalidate: 30 },
+        headers: { Cookie: cookieStore.toString() },
+      }
     );
-    if (!articleRes.ok) return null;
-    const articleData = await articleRes.json();
-    return articleData.article ?? articleData;
+
+    if (articleRes.ok) {
+      const articleData = await articleRes.json();
+      return articleData.article ?? articleData;
+    }
+
+    // Fallback: use the ES result data (has title, description, body, tags, etc.)
+    return match as Article;
   } catch {
     return null;
   }

@@ -5,19 +5,15 @@ import type { Article } from "@/types";
 
 async function getArticles(): Promise<Article[]> {
   try {
+    // /elastic/search/ is public (no auth needed) — safe for SSR without cookies
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/articles/?page_size=6`,
-      {
-        next: { revalidate: 60 },
-        headers: { "Content-Type": "application/json" },
-      }
+      `${process.env.NEXT_PUBLIC_API_URL}/elastic/search/?ordering=-created_at`,
+      { next: { revalidate: 60 } }
     );
     if (!res.ok) return [];
     const data = await res.json();
-    // API wraps response: { status_code, articles: [...] } or paginated { results: [...] }
-    if (data.articles) return data.articles;
-    if (data.results) return data.results;
-    return [];
+    const results: Article[] = data.results ?? [];
+    return results.slice(0, 6);
   } catch {
     return [];
   }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, BookOpen } from "lucide-react";
+import { Search, BookOpen } from "lucide-react";
 import ArticleCard from "@/components/articles/ArticleCard";
 import api from "@/lib/api";
 import type { Article } from "@/types";
@@ -31,12 +31,13 @@ export default function ArticlesPage() {
     async (pageNum = 1, reset = false) => {
       setLoading(true);
       try {
-        const params: Record<string, string> = { page: String(pageNum), page_size: "9" };
-        if (search) params.title = search;
+        // Use public Elasticsearch endpoint — works for both logged-in and anonymous users
+        const params: Record<string, string> = { page: String(pageNum) };
+        if (search) params.search = search;
         if (activeTag !== "All") params.tags = activeTag.toLowerCase();
 
-        const { data } = await api.get("/articles/", { params });
-        const results: Article[] = data.articles ?? data.results ?? [];
+        const { data } = await api.get("/elastic/search/", { params });
+        const results: Article[] = data.results ?? [];
         const count: number = data.count ?? results.length;
 
         setArticles((prev) => (reset || pageNum === 1 ? results : [...prev, ...results]));

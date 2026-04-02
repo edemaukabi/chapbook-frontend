@@ -9,13 +9,12 @@ import type { Profile, Article } from "@/types";
 
 async function getProfile(id: string): Promise<Profile | null> {
   try {
-    // Use the all profiles endpoint and find by id
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/profiles/all/`,
+      `${process.env.NEXT_PUBLIC_API_URL}/profiles/all/?page_size=200`,
       { next: { revalidate: 60 } }
     );
     if (!res.ok) return null;
-    const data = await res.json();
+    const data: { profiles?: Profile[]; results?: Profile[] } = await res.json();
     const profiles: Profile[] = data.profiles ?? data.results ?? [];
     return profiles.find((p) => p.id === id) ?? null;
   } catch {
@@ -25,13 +24,14 @@ async function getProfile(id: string): Promise<Profile | null> {
 
 async function getAuthorArticles(authorId: string): Promise<Article[]> {
   try {
+    // Use public search endpoint filtered by author — avoids auth requirement
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/articles/?author=${authorId}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/elastic/search/?author=${authorId}`,
       { next: { revalidate: 60 } }
     );
     if (!res.ok) return [];
-    const data = await res.json();
-    return data.articles ?? data.results ?? [];
+    const data: { results?: Article[] } = await res.json();
+    return data.results ?? [];
   } catch {
     return [];
   }

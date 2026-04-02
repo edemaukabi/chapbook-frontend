@@ -5,12 +5,14 @@ import type { Profile } from "@/types";
 
 async function getAuthors(): Promise<Profile[]> {
   try {
+    // Request a large page_size to get all profiles in one call
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/profiles/all/`,
+      `${process.env.NEXT_PUBLIC_API_URL}/profiles/all/?page_size=200`,
       { next: { revalidate: 60 } }
     );
     if (!res.ok) return [];
-    const data = await res.json();
+    const data: { profiles?: Profile[]; results?: Profile[]; next?: string } =
+      await res.json();
     return data.profiles ?? data.results ?? [];
   } catch {
     return [];
