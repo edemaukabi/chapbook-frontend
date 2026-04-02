@@ -63,6 +63,7 @@ export default function RichTextEditor({ content, onChange }: Props) {
   const editor = useEditor({
     extensions: [StarterKit],
     content,
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
