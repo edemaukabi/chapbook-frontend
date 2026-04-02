@@ -1,25 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-
-const PROTECTED_PREFIXES = ["/dashboard", "/articles/new"];
-const PROTECTED_PATTERNS = [/^\/articles\/[^/]+\/edit$/];
-
-export function middleware(request: NextRequest) {
-  const token = request.cookies.get("chapbook-access-token");
-  const { pathname } = request.nextUrl;
-
-  const isProtected =
-    PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ||
-    PROTECTED_PATTERNS.some((pattern) => pattern.test(pathname));
-
-  if (isProtected && !token) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  return NextResponse.next();
-}
+// Middleware intentionally left without auth guards.
+// JWT cookies are set by the API on its own domain (cross-origin), so they are
+// not visible to Next.js middleware running on the frontend domain.
+// Route protection is handled client-side via useAuth() in each protected page.
+export function middleware() {}
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: [],
 };

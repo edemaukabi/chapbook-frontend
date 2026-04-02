@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import { ImagePlus, X, Save } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import type { Article } from "@/types";
 
 const RichTextEditor = dynamic(
@@ -17,6 +18,7 @@ const RichTextEditor = dynamic(
 const SUGGESTED_TAGS = ["Technology", "Science", "Culture", "Writing", "Design", "Business", "Health"];
 
 export default function EditArticlePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { user, loading: authLoading } = useRequireAuth();
   const { slug } = use(params);
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -119,6 +121,8 @@ export default function EditArticlePage({ params }: { params: Promise<{ slug: st
     color: "var(--text-primary)",
     fontFamily: "inherit",
   };
+
+  if (authLoading || !user) return null;
 
   if (loading) {
     return (

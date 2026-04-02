@@ -7,6 +7,7 @@ import { PenSquare, Bookmark, Trash2, Edit2, BookOpen, BookmarkX } from "lucide-
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import ArticleCard from "@/components/articles/ArticleCard";
 import type { Article } from "@/types";
 
@@ -95,7 +96,7 @@ function MyArticleCard({ article, onDelete }: { article: Article; onDelete: (id:
 }
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useRequireAuth();
   const [activeTab, setActiveTab] = useState<Tab>("articles");
   const [myArticles, setMyArticles] = useState<Article[]>([]);
   const [loadingArticles, setLoadingArticles] = useState(true);
@@ -133,6 +134,8 @@ export default function DashboardPage() {
     transition: "all var(--transition-fast)",
     boxShadow: activeTab === tab ? "0 4px 12px rgba(124,111,255,0.3)" : "none",
   });
+
+  if (authLoading || !user) return null;
 
   return (
     <div className="container" style={{ padding: "40px 16px 80px" }}>

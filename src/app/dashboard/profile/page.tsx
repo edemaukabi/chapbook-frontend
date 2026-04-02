@@ -6,7 +6,7 @@ import { Camera, Save, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import api from "@/lib/api";
-import { useAuth } from "@/context/AuthContext";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import type { Profile } from "@/types";
 
 const GENDER_OPTIONS = [
@@ -16,7 +16,7 @@ const GENDER_OPTIONS = [
 ];
 
 export default function EditProfilePage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useRequireAuth();
   const fileRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [form, setForm] = useState({
@@ -107,6 +107,8 @@ export default function EditProfilePage() {
     (e.target.style.borderColor = "var(--accent-primary)");
   const blur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     (e.target.style.borderColor = "var(--border-color)");
+
+  if (authLoading || !user) return null;
 
   if (loading) {
     return (
