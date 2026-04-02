@@ -10,7 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { user, refetchUser } = useAuth();
+  const { user, loading: authLoading, refetchUser } = useAuth();
   const [form, setForm] = useState({
     email: "",
     first_name: "",
@@ -22,8 +22,10 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (user) router.replace("/dashboard");
-  }, [user, router]);
+    if (!authLoading && user) router.replace("/dashboard");
+  }, [user, authLoading, router]);
+
+  if (authLoading) return null;
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((prev) => ({ ...prev, [key]: e.target.value }));

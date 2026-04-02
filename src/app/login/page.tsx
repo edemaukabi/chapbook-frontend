@@ -10,7 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, login } = useAuth();
+  const { user, loading: authLoading, login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -19,8 +19,11 @@ function LoginForm() {
   const next = searchParams.get("next") ?? "/dashboard";
 
   useEffect(() => {
-    if (user) router.replace(next);
-  }, [user, next, router]);
+    if (!authLoading && user) router.replace(next);
+  }, [user, authLoading, next, router]);
+
+  // Don't flash the form while auth is resolving
+  if (authLoading) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
