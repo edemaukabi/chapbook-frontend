@@ -98,16 +98,15 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("articles");
   const [myArticles, setMyArticles] = useState<Article[]>([]);
-  const [bookmarks, setBookmarks] = useState<Article[]>([]);
   const [loadingArticles, setLoadingArticles] = useState(true);
-  const [loadingBookmarks, setLoadingBookmarks] = useState(false);
 
   useEffect(() => {
     const fetchMyArticles = async () => {
       setLoadingArticles(true);
       try {
         const { data } = await api.get("/articles/");
-        setMyArticles(data.articles ?? data.results ?? []);
+        // API wraps paginated articles: { articles: { count, results: [...] } }
+        setMyArticles(data.articles?.results ?? data.results ?? []);
       } catch {
         // silently fail
       } finally {
@@ -117,23 +116,6 @@ export default function DashboardPage() {
     fetchMyArticles();
   }, []);
 
-  useEffect(() => {
-    if (activeTab !== "bookmarks") return;
-    const fetchBookmarks = async () => {
-      setLoadingBookmarks(true);
-      try {
-        // Fetch all articles and filter bookmarked — API doesn't have a dedicated bookmarks list endpoint
-        // We re-use the articles list which includes bookmarks_count but there's no "my bookmarks" list
-        // For now show a helpful message
-        setBookmarks([]);
-      } catch {
-        // silently fail
-      } finally {
-        setLoadingBookmarks(false);
-      }
-    };
-    fetchBookmarks();
-  }, [activeTab]);
 
   const handleArticleDeleted = (id: string) => {
     setMyArticles((prev) => prev.filter((a) => a.id !== id));
