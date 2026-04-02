@@ -1,5 +1,18 @@
 import Link from "next/link";
-import { BookOpen, GitFork, X } from "lucide-react";
+import { BookOpen } from "lucide-react";
+
+const EXPLORE_LINKS = [
+  { href: "/articles", label: "Articles" },
+  { href: "/authors", label: "Authors" },
+  { href: "/search", label: "Search" },
+];
+
+const ACCOUNT_LINKS = [
+  { href: "/login", label: "Log in" },
+  { href: "/register", label: "Get started" },
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/articles/new", label: "Write an article" },
+];
 
 export default function Footer() {
   return (
@@ -7,121 +20,103 @@ export default function Footer() {
       style={{
         borderTop: "1px solid var(--border-subtle)",
         background: "var(--bg-secondary)",
-        padding: "40px 0 24px",
         marginTop: "auto",
       }}
     >
-      <div className="container">
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr",
-            gap: 32,
-            marginBottom: 32,
-          }}
-          className="md:grid-cols-4"
-        >
-          {/* Brand */}
-          <div style={{ gridColumn: "span 1" }}>
-            <Link href="/" className="flex items-center gap-2 mb-3">
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: "var(--radius-sm)",
-                  background: "var(--gradient-primary)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <BookOpen size={14} color="white" strokeWidth={2.5} />
-              </div>
-              <span
-                style={{
-                  fontWeight: 700,
-                  color: "var(--text-primary)",
-                  fontSize: "1rem",
-                }}
-              >
-                Chapbook
-              </span>
-            </Link>
-            <p
+      {/* Main footer content */}
+      <div
+        style={{
+          maxWidth: 1200,
+          margin: "0 auto",
+          padding: "48px 24px 32px",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 40,
+          justifyContent: "space-between",
+        }}
+      >
+        {/* Brand */}
+        <div style={{ flex: "1 1 220px", maxWidth: 280 }}>
+          <Link
+            href="/"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              textDecoration: "none",
+              marginBottom: 14,
+            }}
+          >
+            <div
               style={{
-                fontSize: "0.85rem",
-                color: "var(--text-muted)",
-                lineHeight: 1.6,
-                maxWidth: 220,
+                width: 30,
+                height: 30,
+                borderRadius: "var(--radius-sm)",
+                background: "var(--gradient-primary)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
               }}
             >
-              A modern platform for writers and readers who value great
-              storytelling.
-            </p>
-          </div>
-
-          {/* Links */}
-          <FooterCol
-            title="Explore"
-            links={[
-              { href: "/articles", label: "Articles" },
-              { href: "/authors", label: "Authors" },
-              { href: "/search", label: "Search" },
-            ]}
-          />
-          <FooterCol
-            title="Account"
-            links={[
-              { href: "/login", label: "Log in" },
-              { href: "/register", label: "Get started" },
-              { href: "/dashboard", label: "Dashboard" },
-            ]}
-          />
-          <FooterCol
-            title="Write"
-            links={[
-              { href: "/articles/new", label: "New article" },
-              { href: "/dashboard", label: "My articles" },
-            ]}
-          />
+              <BookOpen size={15} color="white" strokeWidth={2.5} />
+            </div>
+            <span
+              style={{
+                fontWeight: 700,
+                color: "var(--text-primary)",
+                fontSize: "1.05rem",
+                letterSpacing: "-0.01em",
+              }}
+            >
+              Chapbook
+            </span>
+          </Link>
+          <p
+            style={{
+              fontSize: "0.875rem",
+              color: "var(--text-muted)",
+              lineHeight: 1.7,
+            }}
+          >
+            A modern platform for writers and readers who value great
+            storytelling. Write, discover, and connect.
+          </p>
         </div>
 
-        {/* Bottom row */}
+        {/* Nav columns */}
         <div
           style={{
-            borderTop: "1px solid var(--border-subtle)",
-            paddingTop: 20,
             display: "flex",
             flexWrap: "wrap",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
+            gap: 40,
           }}
         >
-          <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-            © {new Date().getFullYear()} Chapbook. All rights reserved.
-          </p>
-          <div style={{ display: "flex", gap: 12 }}>
-            <a
-              href="https://twitter.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: "var(--text-muted)" }}
-              aria-label="Twitter"
-            >
-              <X size={16} />
-            </a>
-            <a
-              href="https://github.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: "var(--text-muted)" }}
-              aria-label="GitHub"
-            >
-              <GitFork size={16} />
-            </a>
-          </div>
+          <FooterCol title="Explore" links={EXPLORE_LINKS} />
+          <FooterCol title="Account" links={ACCOUNT_LINKS} />
         </div>
+      </div>
+
+      {/* Bottom bar */}
+      <div
+        style={{
+          borderTop: "1px solid var(--border-subtle)",
+          maxWidth: 1200,
+          margin: "0 auto",
+          padding: "16px 24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 8,
+        }}
+      >
+        <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: 0 }}>
+          © {new Date().getFullYear()} Chapbook. All rights reserved.
+        </p>
+        <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: 0 }}>
+          Built for writers, by writers.
+        </p>
       </div>
     </footer>
   );
@@ -135,29 +130,35 @@ function FooterCol({
   links: { href: string; label: string }[];
 }) {
   return (
-    <div>
+    <div style={{ minWidth: 130 }}>
       <h4
         style={{
-          fontSize: "0.8rem",
+          fontSize: "0.75rem",
           fontWeight: 600,
-          color: "var(--text-primary)",
+          color: "var(--text-secondary)",
           textTransform: "uppercase",
           letterSpacing: "0.1em",
-          marginBottom: 14,
+          marginBottom: 16,
+          margin: "0 0 16px",
         }}
       >
         {title}
       </h4>
-      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+      <ul
+        style={{
+          listStyle: "none",
+          padding: 0,
+          margin: 0,
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+        }}
+      >
         {links.map(({ href, label }) => (
           <li key={href}>
             <Link
               href={href}
-              style={{
-                fontSize: "0.875rem",
-                color: "var(--text-muted)",
-                transition: "color var(--transition-fast)",
-              }}
+              className="footer-link"
             >
               {label}
             </Link>
