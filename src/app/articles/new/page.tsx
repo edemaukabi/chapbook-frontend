@@ -59,22 +59,36 @@ export default function NewArticlePage() {
 
     setPublishing(true);
     try {
-      const formData = new FormData();
-      formData.append("title", title);
-      formData.append("description", description);
-      formData.append("body", body);
-      tags.forEach((t) => formData.append("tags", t));
-      if (bannerFile) formData.append("banner_image", bannerFile);
+      let data;
 
-      const { data } = await api.post("/articles/", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      if (bannerFile) {
+        // Use multipart when a banner image is attached
+        const formData = new FormData();
+        formData.append("title", title);
+        formData.append("description", description);
+        formData.append("body", body);
+        formData.append("tags", JSON.stringify(tags));
+        formData.append("banner_image", bannerFile);
+        ({ data } = await api.post("/articles/", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        }));
+      } else {
+        // JSON when no file — simpler and avoids multipart tag parsing issues
+        ({ data } = await api.post("/articles/", {
+          title,
+          description,
+          body,
+          tags,
+        }));
+      }
+
       const article = data.article ?? data;
       toast.success("Article published!");
       router.push(`/articles/${article.slug}`);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      toast.error(msg ?? "Failed to publish article");
+      const errData = (err as { response?: { data?: Record<string, unknown> } })?.response?.data;
+      const msg = (errData?.detail as string) ?? Object.values(errData ?? {})?.[0]?.toString() ?? "Failed to publish article";
+      toast.error(msg);
     } finally {
       setPublishing(false);
     }
