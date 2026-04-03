@@ -88,21 +88,27 @@ export default function NewArticlePage() {
       toast.success("Article published!");
       router.push(`/articles/${article.slug}`);
     } catch (err: unknown) {
-      const response = (err as { response?: { data?: Record<string, unknown>; status?: number } })?.response;
-      console.error("Publish error:", response?.status, JSON.stringify(response?.data));
+      const response = (err as { response?: { data?: unknown; status?: number } })?.response;
+      console.error("Publish error:", response?.status, response?.data);
 
-      // API wraps errors: { status_code, articles: { field: [errors] } } or { detail }
-      const raw = response?.data ?? {};
-      const inner = (raw.articles ?? raw) as Record<string, unknown>;
-      const msg =
-        (inner.detail as string) ??
-        (inner.non_field_errors as string[])?.join(", ") ??
-        Object.entries(inner)
-          .filter(([k]) => k !== "status_code")
-          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v[0] : v}`)
-          .join(", ") ??
-        "Failed to publish article";
-      toast.error(msg || "Failed to publish article");
+      const raw = response?.data;
+      // If response is HTML (500) or not an object, show a generic message
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+        toast.error(`Server error (${response?.status ?? "unknown"}) — please try again`);
+      } else {
+        const data = raw as Record<string, unknown>;
+        const inner = (typeof data.articles === "object" && data.articles !== null ? data.articles : data) as Record<string, unknown>;
+        const msg =
+          (inner.detail as string) ??
+          (inner.non_field_errors as string[])?.join(", ") ??
+          Object.entries(inner)
+            .filter(([k]) => k !== "status_code")
+            .map(([, v]) => (Array.isArray(v) ? v[0] : v))
+            .filter(Boolean)
+            .join(", ") ??
+          "Failed to publish article";
+        toast.error(String(msg) || "Failed to publish article");
+      }
     } finally {
       setPublishing(false);
     }
