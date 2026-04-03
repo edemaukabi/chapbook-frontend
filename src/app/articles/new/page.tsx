@@ -84,7 +84,8 @@ export default function NewArticlePage() {
         }));
       }
 
-      const article = data.article ?? data;
+      // ArticlesJSONRenderer wraps the single created article as { articles: {...} }
+      const article = data.article ?? data.articles ?? data;
       toast.success("Article published!");
       router.push(`/articles/${article.slug}`);
     } catch (err: unknown) {

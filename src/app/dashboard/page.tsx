@@ -97,16 +97,17 @@ function MyArticleCard({ article, onDelete }: { article: Article; onDelete: (id:
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useRequireAuth();
+  const { user: authUser } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("articles");
   const [myArticles, setMyArticles] = useState<Article[]>([]);
   const [loadingArticles, setLoadingArticles] = useState(true);
 
   useEffect(() => {
+    if (!authUser) return;
     const fetchMyArticles = async () => {
       setLoadingArticles(true);
       try {
-        const { data } = await api.get("/articles/");
-        // API wraps paginated articles: { articles: { count, results: [...] } }
+        const { data } = await api.get(`/articles/?author_pkid=${authUser.pk}`);
         setMyArticles(data.articles?.results ?? data.results ?? []);
       } catch {
         // silently fail
@@ -115,7 +116,7 @@ export default function DashboardPage() {
       }
     };
     fetchMyArticles();
-  }, []);
+  }, [authUser]);
 
 
   const handleArticleDeleted = (id: string) => {
