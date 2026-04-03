@@ -54,7 +54,9 @@ export default function NewArticlePage() {
 
   const handlePublish = async () => {
     if (!title.trim()) { toast.error("Title is required"); return; }
+    if (title.length > 255) { toast.error("Title must be 255 characters or less"); return; }
     if (!description.trim()) { toast.error("Description is required"); return; }
+    if (description.length > 255) { toast.error("Description must be 255 characters or less"); return; }
     if (!body || body === "<p></p>") { toast.error("Article body is required"); return; }
 
     setPublishing(true);
@@ -231,7 +233,7 @@ export default function NewArticlePage() {
       {/* Description */}
       <textarea
         value={description}
-        onChange={(e) => setDescription(e.target.value)}
+        onChange={(e) => setDescription(e.target.value.slice(0, 255))}
         placeholder="A short description (shown in previews)…"
         rows={2}
         style={{
@@ -240,12 +242,15 @@ export default function NewArticlePage() {
           color: "var(--text-secondary)",
           lineHeight: 1.6,
           resize: "none",
-          marginBottom: 24,
-          borderBottom: "1px solid var(--border-subtle)",
-          paddingBottom: 20,
+          marginBottom: 8,
           display: "block",
         }}
       />
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 24, borderBottom: "1px solid var(--border-subtle)", paddingBottom: 16 }}>
+        <span style={{ fontSize: "0.75rem", color: description.length > 230 ? "var(--accent-secondary)" : "var(--text-muted)" }}>
+          {description.length}/255
+        </span>
+      </div>
 
       {/* Tags */}
       <div style={{ marginBottom: 28 }}>
