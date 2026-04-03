@@ -86,9 +86,21 @@ export default function NewArticlePage() {
       toast.success("Article published!");
       router.push(`/articles/${article.slug}`);
     } catch (err: unknown) {
-      const errData = (err as { response?: { data?: Record<string, unknown> } })?.response?.data;
-      const msg = (errData?.detail as string) ?? Object.values(errData ?? {})?.[0]?.toString() ?? "Failed to publish article";
-      toast.error(msg);
+      const response = (err as { response?: { data?: Record<string, unknown>; status?: number } })?.response;
+      console.error("Publish error:", response?.status, JSON.stringify(response?.data));
+
+      // API wraps errors: { status_code, articles: { field: [errors] } } or { detail }
+      const raw = response?.data ?? {};
+      const inner = (raw.articles ?? raw) as Record<string, unknown>;
+      const msg =
+        (inner.detail as string) ??
+        (inner.non_field_errors as string[])?.join(", ") ??
+        Object.entries(inner)
+          .filter(([k]) => k !== "status_code")
+          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v[0] : v}`)
+          .join(", ") ??
+        "Failed to publish article";
+      toast.error(msg || "Failed to publish article");
     } finally {
       setPublishing(false);
     }
