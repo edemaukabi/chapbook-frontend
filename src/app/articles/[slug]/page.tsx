@@ -11,36 +11,39 @@ import type { Article } from "@/types";
 
 async function getArticle(slug: string): Promise<Article | null> {
   try {
-    // Step 1: Find article UUID via Elasticsearch (public endpoint — no auth needed)
-    const searchRes = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/elastic/search/?search=${encodeURIComponent(slug)}`,
-      { next: { revalidate: 30 } }
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore.toString();
+
+    // Look up by slug filter — public endpoint, no auth needed for listing
+    const listRes = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/articles/?slug=${encodeURIComponent(slug)}`,
+      {
+        next: { revalidate: 30 },
+        headers: cookieHeader ? { Cookie: cookieHeader } : {},
+      }
     );
-    if (!searchRes.ok) return null;
-    const searchData = await searchRes.json();
-    const results = searchData.results ?? [];
-    const match = results.find((a: { slug: string }) => a.slug === slug);
+    if (!listRes.ok) return null;
+
+    const listData = await listRes.json();
+    // ArticlesJSONRenderer wraps as { articles: { results: [...] } }
+    const results: Article[] =
+      listData.articles?.results ?? listData.results ?? [];
+    const match = results.find((a: Article) => a.slug === slug);
     if (!match) return null;
 
-    // Step 2: Fetch full article by UUID — forward the user's auth cookie so the
-    // backend accepts the request. Works for logged-in users; anonymous users get
-    // a 401 and we fall back to the ES result which has enough data to render.
-    const cookieStore = await cookies();
-    const articleRes = await fetch(
+    // Fetch full article detail by UUID for view recording and full data
+    const detailRes = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/articles/${match.id}/`,
       {
         next: { revalidate: 30 },
-        headers: { Cookie: cookieStore.toString() },
+        headers: cookieHeader ? { Cookie: cookieHeader } : {},
       }
     );
+    if (!detailRes.ok) return match; // fall back to list data
 
-    if (articleRes.ok) {
-      const articleData = await articleRes.json();
-      return articleData.article ?? articleData;
-    }
-
-    // Fallback: use the ES result data (has title, description, body, tags, etc.)
-    return match as Article;
+    const detailData = await detailRes.json();
+    // ArticleJSONRenderer wraps as { article: {...} }
+    return detailData.article ?? detailData;
   } catch {
     return null;
   }
@@ -126,15 +129,9 @@ export default async function ArticleDetailPage({
           marginBottom: 32,
         }}
       >
-        {/* Author */}
         <Link
           href={`/authors/${article.author_info?.id}`}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            textDecoration: "none",
-          }}
+          style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}
         >
           <div
             style={{
@@ -154,37 +151,16 @@ export default async function ArticleDetailPage({
             {article.author_info?.first_name?.[0]?.toUpperCase() ?? "?"}
           </div>
           <div>
-            <p
-              style={{
-                fontWeight: 600,
-                fontSize: "0.9rem",
-                color: "var(--text-primary)",
-              }}
-            >
+            <p style={{ fontWeight: 600, fontSize: "0.9rem", color: "var(--text-primary)" }}>
               {article.author_info?.full_name ?? "Unknown"}
             </p>
-            <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-              Author
-            </p>
+            <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Author</p>
           </div>
         </Link>
 
-        <div
-          style={{
-            width: 1,
-            height: 32,
-            background: "var(--border-subtle)",
-          }}
-        />
+        <div style={{ width: 1, height: 32, background: "var(--border-subtle)" }} />
 
-        <div
-          style={{
-            display: "flex",
-            gap: 16,
-            flexWrap: "wrap",
-            alignItems: "center",
-          }}
-        >
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
           <MetaStat icon={<Calendar size={14} />} value={formatDate(article.created_at)} />
           <MetaStat icon={<Clock size={14} />} value={`${article.estimated_reading_time} min read`} />
           <MetaStat icon={<Eye size={14} />} value={`${article.views} views`} />
@@ -213,29 +189,20 @@ export default async function ArticleDetailPage({
         </div>
       )}
 
-      {/* Article body */}
+      {/* Body */}
       <div
         className="article-body"
         dangerouslySetInnerHTML={{ __html: article.body }}
         style={{ marginBottom: 48 }}
       />
 
-      {/* Actions — clap, rate, bookmark (client component) */}
       <ArticleActions article={article} />
-
-      {/* Comments */}
       <CommentSection articleId={article.id} />
     </div>
   );
 }
 
-function MetaStat({
-  icon,
-  value,
-}: {
-  icon: React.ReactNode;
-  value: string;
-}) {
+function MetaStat({ icon, value }: { icon: React.ReactNode; value: string }) {
   return (
     <span
       style={{

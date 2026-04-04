@@ -4,19 +4,17 @@ import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Search, BookOpen } from "lucide-react";
 import ArticleCard from "@/components/articles/ArticleCard";
-import api from "@/lib/api";
 import type { Article } from "@/types";
 
 const TAGS = ["All", "Technology", "Science", "Culture", "Writing", "Design", "Business", "Health"];
+
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 const container = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.06 } },
 };
-const item = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0 },
-};
+const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
 export default function ArticlesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -31,21 +29,28 @@ export default function ArticlesPage() {
     async (pageNum = 1, reset = false) => {
       setLoading(true);
       try {
-        // Use public Elasticsearch endpoint — works for both logged-in and anonymous users
-        const params: Record<string, string> = { page: String(pageNum) };
-        if (search) params.search = search;
-        if (activeTag !== "All") params.tags = activeTag.toLowerCase();
+        const params = new URLSearchParams({ page: String(pageNum) });
+        if (search.trim()) params.set("title", search.trim());
+        if (activeTag !== "All") params.set("tags", activeTag.toLowerCase());
+        params.set("ordering", "-created_at");
 
-        const { data } = await api.get("/elastic/search/", { params });
-        const results: Article[] = data.results ?? [];
-        const count: number = data.count ?? results.length;
+        const res = await fetch(`${API}/articles/?${params}`, {
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+
+        // ArticlesJSONRenderer wraps as { articles: { count, results: [] } }
+        const results: Article[] = data.articles?.results ?? data.results ?? [];
+        const count: number = data.articles?.count ?? data.count ?? results.length;
+        const next = data.articles?.next ?? data.next ?? null;
 
         setArticles((prev) => (reset || pageNum === 1 ? results : [...prev, ...results]));
         setTotal(count);
-        setHasMore(!!data.next);
+        setHasMore(!!next);
         setPage(pageNum);
       } catch {
-        // silently fail — empty state shown
+        // show empty state
       } finally {
         setLoading(false);
       }
@@ -64,7 +69,6 @@ export default function ArticlesPage() {
 
   return (
     <div className="container" style={{ padding: "40px 16px 80px" }}>
-      {/* Header */}
       <div style={{ marginBottom: 40 }}>
         <h1
           style={{
@@ -77,11 +81,13 @@ export default function ArticlesPage() {
           <span className="gradient-text">All Articles</span>
         </h1>
         <p style={{ color: "var(--text-secondary)", fontSize: "1rem" }}>
-          {total > 0 ? `${total} articles from the community` : "Discover stories from writers worldwide"}
+          {total > 0
+            ? `${total} article${total !== 1 ? "s" : ""} from the community`
+            : "Discover stories from writers worldwide"}
         </p>
       </div>
 
-      {/* Search bar */}
+      {/* Search */}
       <form onSubmit={handleSearch} style={{ marginBottom: 24, position: "relative" }}>
         <Search
           size={18}
@@ -116,14 +122,7 @@ export default function ArticlesPage() {
       </form>
 
       {/* Tag filter */}
-      <div
-        style={{
-          display: "flex",
-          gap: 8,
-          flexWrap: "wrap",
-          marginBottom: 32,
-        }}
-      >
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 32 }}>
         {TAGS.map((tag) => (
           <button
             key={tag}
@@ -133,8 +132,7 @@ export default function ArticlesPage() {
               borderRadius: "var(--radius-full)",
               fontSize: "0.82rem",
               fontWeight: activeTag === tag ? 600 : 400,
-              background:
-                activeTag === tag ? "var(--gradient-primary)" : "var(--bg-card)",
+              background: activeTag === tag ? "var(--gradient-primary)" : "var(--bg-card)",
               border: `1px solid ${activeTag === tag ? "transparent" : "var(--border-color)"}`,
               color: activeTag === tag ? "white" : "var(--text-secondary)",
               cursor: "pointer",
@@ -147,7 +145,7 @@ export default function ArticlesPage() {
         ))}
       </div>
 
-      {/* Articles grid */}
+      {/* Grid */}
       {loading && articles.length === 0 ? (
         <div
           style={{
@@ -161,20 +159,10 @@ export default function ArticlesPage() {
           ))}
         </div>
       ) : articles.length === 0 ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "80px 24px",
-            color: "var(--text-muted)",
-          }}
-        >
+        <div style={{ textAlign: "center", padding: "80px 24px", color: "var(--text-muted)" }}>
           <BookOpen size={48} style={{ margin: "0 auto 16px", opacity: 0.3 }} />
-          <p style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: 8 }}>
-            No articles found
-          </p>
-          <p style={{ fontSize: "0.875rem" }}>
-            Try a different search term or tag filter
-          </p>
+          <p style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: 8 }}>No articles found</p>
+          <p style={{ fontSize: "0.875rem" }}>Try a different search term or tag filter</p>
         </div>
       ) : (
         <>
@@ -210,7 +198,6 @@ export default function ArticlesPage() {
                   fontSize: "0.9rem",
                   cursor: loading ? "not-allowed" : "pointer",
                   opacity: loading ? 0.6 : 1,
-                  transition: "all var(--transition-fast)",
                 }}
               >
                 {loading ? "Loading..." : "Load more"}
@@ -242,30 +229,9 @@ function ArticleSkeleton() {
         }}
       />
       <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
-        <div
-          style={{
-            height: 12,
-            width: "60%",
-            background: "var(--bg-elevated)",
-            borderRadius: 4,
-          }}
-        />
-        <div
-          style={{
-            height: 20,
-            width: "90%",
-            background: "var(--bg-elevated)",
-            borderRadius: 4,
-          }}
-        />
-        <div
-          style={{
-            height: 14,
-            width: "75%",
-            background: "var(--bg-elevated)",
-            borderRadius: 4,
-          }}
-        />
+        <div style={{ height: 12, width: "60%", background: "var(--bg-elevated)", borderRadius: 4 }} />
+        <div style={{ height: 20, width: "90%", background: "var(--bg-elevated)", borderRadius: 4 }} />
+        <div style={{ height: 14, width: "75%", background: "var(--bg-elevated)", borderRadius: 4 }} />
       </div>
     </div>
   );

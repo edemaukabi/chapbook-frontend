@@ -1,18 +1,19 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 import { MapPin, X as TwitterIcon } from "lucide-react";
 import FollowButton from "@/components/profile/FollowButton";
 import ArticleCard from "@/components/articles/ArticleCard";
 import type { Profile, Article } from "@/types";
 
+const API = process.env.NEXT_PUBLIC_API_URL;
+
 async function getProfile(id: string): Promise<Profile | null> {
   try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/profiles/all/?page_size=200`,
-      { next: { revalidate: 60 } }
-    );
+    // Fetch all profiles (public endpoint) and find by id
+    const res = await fetch(`${API}/profiles/all/?page_size=500`, {
+      next: { revalidate: 60 },
+    });
     if (!res.ok) return null;
     const data: { profiles?: Profile[]; results?: Profile[] } = await res.json();
     const profiles: Profile[] = data.profiles ?? data.results ?? [];
@@ -22,16 +23,16 @@ async function getProfile(id: string): Promise<Profile | null> {
   }
 }
 
-async function getAuthorArticles(authorId: string): Promise<Article[]> {
+async function getAuthorArticles(profileId: string): Promise<Article[]> {
   try {
-    // Use public search endpoint filtered by author — avoids auth requirement
+    // Public articles endpoint filtered by profile UUID
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/elastic/search/?author=${authorId}`,
+      `${API}/articles/?author_profile_id=${profileId}&ordering=-created_at`,
       { next: { revalidate: 60 } }
     );
     if (!res.ok) return [];
-    const data: { results?: Article[] } = await res.json();
-    return data.results ?? [];
+    const data = await res.json();
+    return data.articles?.results ?? data.results ?? [];
   } catch {
     return [];
   }
@@ -69,15 +70,9 @@ export default async function AuthorProfilePage({
       {/* Profile header */}
       <div
         style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border-color)",
-          borderRadius: "var(--radius-xl)",
-          padding: "36px",
-          marginBottom: 40,
-          display: "flex",
-          gap: 28,
-          flexWrap: "wrap",
-          alignItems: "flex-start",
+          background: "var(--bg-card)", border: "1px solid var(--border-color)",
+          borderRadius: "var(--radius-xl)", padding: "36px", marginBottom: 40,
+          display: "flex", gap: 28, flexWrap: "wrap", alignItems: "flex-start",
         }}
       >
         {/* Avatar */}
@@ -95,16 +90,10 @@ export default async function AuthorProfilePage({
           ) : (
             <div
               style={{
-                width: 96,
-                height: 96,
-                borderRadius: "50%",
+                width: 96, height: 96, borderRadius: "50%",
                 background: "var(--gradient-primary)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontWeight: 700,
-                color: "white",
-                fontSize: "2rem",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontWeight: 700, color: "white", fontSize: "2rem",
               }}
             >
               {profile.first_name?.[0]?.toUpperCase() ?? "?"}
@@ -114,7 +103,13 @@ export default async function AuthorProfilePage({
 
         {/* Info */}
         <div style={{ flex: 1, minWidth: 200 }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
+          <div
+            style={{
+              display: "flex", alignItems: "flex-start",
+              justifyContent: "space-between", gap: 12,
+              flexWrap: "wrap", marginBottom: 8,
+            }}
+          >
             <div>
               <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-primary)", marginBottom: 4 }}>
                 {profile.full_name}
@@ -160,9 +155,7 @@ export default async function AuthorProfilePage({
       </h2>
 
       {articles.length === 0 ? (
-        <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
-          No articles published yet.
-        </p>
+        <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>No articles published yet.</p>
       ) : (
         <div
           style={{
