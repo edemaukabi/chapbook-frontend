@@ -2,16 +2,17 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
-import { PenSquare, Bookmark, Trash2, Edit2, BookOpen, BookmarkX } from "lucide-react";
+import { PenSquare, Bookmark, Trash2, Edit2, BookOpen, BookmarkX, Users, UserMinus } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import ArticleCard from "@/components/articles/ArticleCard";
-import type { Article } from "@/types";
+import type { Article, Profile } from "@/types";
 
-type Tab = "articles" | "bookmarks";
+type Tab = "articles" | "bookmarks" | "following";
 
 const container = {
   hidden: { opacity: 0 },
@@ -156,12 +157,107 @@ function MyArticleCard({ article, onDelete }: { article: Article; onDelete: (id:
   );
 }
 
+function FollowingCard({ profile, onUnfollow }: { profile: Profile; onUnfollow: (id: string) => void }) {
+  const [unfollowing, setUnfollowing] = useState(false);
+
+  const handleUnfollow = async () => {
+    setUnfollowing(true);
+    try {
+      await api.post(`/profiles/${profile.id}/unfollow/`);
+      onUnfollow(profile.id);
+      toast.success(`Unfollowed ${profile.first_name}`);
+    } catch {
+      toast.error("Failed to unfollow");
+      setUnfollowing(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        display: "flex", alignItems: "center", gap: 14,
+        padding: "16px 20px",
+        background: "var(--bg-card)", border: "1px solid var(--border-color)",
+        borderRadius: "var(--radius-lg)",
+      }}
+    >
+      <Link href={`/authors/${profile.id}`} style={{ flexShrink: 0 }}>
+        {profile.profile_photo ? (
+          <div style={{ width: 52, height: 52, borderRadius: "50%", overflow: "hidden" }}>
+            <Image
+              src={profile.profile_photo}
+              alt={profile.full_name}
+              width={52}
+              height={52}
+              style={{ objectFit: "cover", width: "100%", height: "100%" }}
+            />
+          </div>
+        ) : (
+          <div style={{
+            width: 52, height: 52, borderRadius: "50%",
+            background: "var(--gradient-primary)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontWeight: 700, color: "white", fontSize: "1.2rem",
+          }}>
+            {profile.first_name?.[0]?.toUpperCase() ?? "?"}
+          </div>
+        )}
+      </Link>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <Link href={`/authors/${profile.id}`} style={{ textDecoration: "none" }}>
+          <p style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--text-primary)", marginBottom: 2 }}>
+            {profile.full_name}
+          </p>
+        </Link>
+        {profile.about_me && (
+          <p style={{
+            fontSize: "0.8rem", color: "var(--text-secondary)",
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>
+            {profile.about_me}
+          </p>
+        )}
+      </div>
+
+      <button
+        onClick={handleUnfollow}
+        disabled={unfollowing}
+        style={{
+          display: "flex", alignItems: "center", gap: 6,
+          padding: "7px 14px", borderRadius: "var(--radius-full)",
+          border: "1px solid var(--border-color)", background: "transparent",
+          color: "var(--text-secondary)", fontSize: "0.8rem", fontWeight: 500,
+          cursor: unfollowing ? "not-allowed" : "pointer",
+          opacity: unfollowing ? 0.6 : 1, flexShrink: 0,
+          transition: "all var(--transition-fast)",
+        }}
+        onMouseEnter={(e) => {
+          if (!unfollowing) {
+            (e.currentTarget as HTMLElement).style.borderColor = "var(--accent-secondary)";
+            (e.currentTarget as HTMLElement).style.color = "var(--accent-secondary)";
+          }
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLElement).style.borderColor = "var(--border-color)";
+          (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
+        }}
+      >
+        <UserMinus size={13} />
+        {unfollowing ? "Unfollowing…" : "Unfollow"}
+      </button>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { user, loading: authLoading } = useRequireAuth();
   const { user: authUser } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("articles");
   const [myArticles, setMyArticles] = useState<Article[]>([]);
   const [loadingArticles, setLoadingArticles] = useState(true);
+  const [following, setFollowing] = useState<Profile[]>([]);
+  const [loadingFollowing, setLoadingFollowing] = useState(false);
 
   useEffect(() => {
     if (!authUser) return;
@@ -179,9 +275,28 @@ export default function DashboardPage() {
     fetchMyArticles();
   }, [authUser]);
 
+  useEffect(() => {
+    if (activeTab !== "following") return;
+    const fetchFollowing = async () => {
+      setLoadingFollowing(true);
+      try {
+        const { data } = await api.get("/profiles/me/following/");
+        setFollowing(data.following ?? []);
+      } catch {
+        // silently fail
+      } finally {
+        setLoadingFollowing(false);
+      }
+    };
+    fetchFollowing();
+  }, [activeTab]);
 
   const handleArticleDeleted = (id: string) => {
     setMyArticles((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const handleUnfollowed = (id: string) => {
+    setFollowing((prev) => prev.filter((p) => p.id !== id));
   };
 
   const tabStyle = (tab: Tab) => ({
@@ -295,6 +410,12 @@ export default function DashboardPage() {
             Saved
           </span>
         </button>
+        <button onClick={() => setActiveTab("following")} style={tabStyle("following")}>
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Users size={14} />
+            Following
+          </span>
+        </button>
       </div>
 
       {/* Articles tab */}
@@ -379,6 +500,61 @@ export default function DashboardPage() {
             Save articles by clicking the bookmark button on any article
           </p>
         </div>
+      )}
+
+      {/* Following tab */}
+      {activeTab === "following" && (
+        <>
+          {loadingFollowing ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: "var(--bg-card)", border: "1px solid var(--border-color)",
+                    borderRadius: "var(--radius-lg)", height: 84,
+                    animation: "pulse 1.5s ease-in-out infinite",
+                  }}
+                />
+              ))}
+            </div>
+          ) : following.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "80px 24px", color: "var(--text-muted)" }}>
+              <Users size={48} style={{ margin: "0 auto 16px", opacity: 0.3 }} />
+              <p style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: 8 }}>
+                Not following anyone yet
+              </p>
+              <p style={{ fontSize: "0.875rem", marginBottom: 20 }}>
+                Discover writers and follow them to keep up with their work
+              </p>
+              <Link href="/authors">
+                <button
+                  style={{
+                    padding: "10px 24px", borderRadius: "var(--radius-full)",
+                    background: "var(--gradient-primary)", border: "none",
+                    color: "white", fontWeight: 600, cursor: "pointer",
+                    boxShadow: "0 4px 12px rgba(124,111,255,0.3)",
+                  }}
+                >
+                  Browse writers
+                </button>
+              </Link>
+            </div>
+          ) : (
+            <motion.div
+              variants={container}
+              initial="hidden"
+              animate="show"
+              style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 640 }}
+            >
+              {following.map((profile) => (
+                <motion.div key={profile.id} variants={item}>
+                  <FollowingCard profile={profile} onUnfollow={handleUnfollowed} />
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </>
       )}
     </div>
   );
