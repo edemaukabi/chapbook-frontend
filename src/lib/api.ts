@@ -28,11 +28,15 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Only attempt refresh on 401, and not on the refresh/login/logout endpoints themselves
+    // Do not attempt refresh on auth endpoints — a 401 from /auth/user/ means
+    // the user is simply not logged in (no redirect loop), and /auth/registration/
+    // should also be exempt so a failed registration doesn't trigger a refresh.
     const isAuthEndpoint =
       originalRequest?.url?.includes("/auth/token/refresh/") ||
       originalRequest?.url?.includes("/auth/login/") ||
-      originalRequest?.url?.includes("/auth/logout/");
+      originalRequest?.url?.includes("/auth/logout/") ||
+      originalRequest?.url?.includes("/auth/user/") ||
+      originalRequest?.url?.includes("/auth/registration/");
 
     if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       if (isRefreshing) {
