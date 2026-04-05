@@ -6,24 +6,24 @@ import type { Article } from "@/types";
 interface Stats {
   articleCount: number;
   writerCount: number;
+  readerCount: number;
 }
 
 async function getStats(): Promise<Stats> {
   try {
-    const [articleRes, profileRes] = await Promise.all([
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/articles/?page=1`, { next: { revalidate: 60 } }),
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/profiles/all/?page=1`, { next: { revalidate: 60 } }),
-    ]);
-    const [articleData, profileData] = await Promise.all([
-      articleRes.ok ? articleRes.json() : null,
-      profileRes.ok ? profileRes.json() : null,
-    ]);
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/articles/stats/`,
+      { next: { revalidate: 60 } }
+    );
+    if (!res.ok) return { articleCount: 0, writerCount: 0, readerCount: 0 };
+    const data = await res.json();
     return {
-      articleCount: articleData?.articles?.count ?? articleData?.count ?? 0,
-      writerCount: profileData?.profiles?.count ?? profileData?.count ?? 0,
+      articleCount: data.articles_count ?? 0,
+      writerCount: data.writers_count ?? 0,
+      readerCount: data.readers_count ?? 0,
     };
   } catch {
-    return { articleCount: 0, writerCount: 0 };
+    return { articleCount: 0, writerCount: 0, readerCount: 0 };
   }
 }
 
@@ -138,7 +138,7 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          {(stats.articleCount > 0 || stats.writerCount > 0) && (
+          {(stats.articleCount > 0 || stats.writerCount > 0 || stats.readerCount > 0) && (
             <div
               style={{
                 display: "flex", gap: 40, justifyContent: "center",
@@ -148,6 +148,7 @@ export default async function HomePage() {
               {[
                 { label: "Articles published", value: formatCount(stats.articleCount) },
                 { label: "Writers", value: formatCount(stats.writerCount) },
+                { label: "Readers", value: formatCount(stats.readerCount) },
               ].map(({ label, value }) => (
                 <div key={label} style={{ textAlign: "center" }}>
                   <p
@@ -255,7 +256,9 @@ export default async function HomePage() {
                 letterSpacing: "-0.02em", marginBottom: 14, position: "relative",
               }}
             >
-              Join {stats.writerCount > 0 ? formatCount(stats.writerCount) : "a growing community of"}{" "}
+              {stats.writerCount >= 50
+                ? `Join ${formatCount(stats.writerCount)}`
+                : "Join a growing community of"}{" "}
               <span className="gradient-text">writers &amp; readers</span>
             </h2>
             <p
