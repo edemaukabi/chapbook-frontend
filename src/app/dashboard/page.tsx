@@ -258,6 +258,8 @@ export default function DashboardPage() {
   const [loadingArticles, setLoadingArticles] = useState(true);
   const [following, setFollowing] = useState<Profile[]>([]);
   const [loadingFollowing, setLoadingFollowing] = useState(false);
+  const [bookmarks, setBookmarks] = useState<Article[]>([]);
+  const [loadingBookmarks, setLoadingBookmarks] = useState(false);
 
   useEffect(() => {
     if (!authUser) return;
@@ -291,12 +293,32 @@ export default function DashboardPage() {
     fetchFollowing();
   }, [activeTab]);
 
+  useEffect(() => {
+    if (activeTab !== "bookmarks") return;
+    const fetchBookmarks = async () => {
+      setLoadingBookmarks(true);
+      try {
+        const { data } = await api.get("/bookmarks/");
+        setBookmarks(data.bookmarks ?? []);
+      } catch {
+        // silently fail
+      } finally {
+        setLoadingBookmarks(false);
+      }
+    };
+    fetchBookmarks();
+  }, [activeTab]);
+
   const handleArticleDeleted = (id: string) => {
     setMyArticles((prev) => prev.filter((a) => a.id !== id));
   };
 
   const handleUnfollowed = (id: string) => {
     setFollowing((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const handleBookmarkRemoved = (id: string) => {
+    setBookmarks((prev) => prev.filter((a) => a.id !== id));
   };
 
   const tabStyle = (tab: Tab) => ({
@@ -491,15 +513,51 @@ export default function DashboardPage() {
 
       {/* Bookmarks tab */}
       {activeTab === "bookmarks" && (
-        <div style={{ textAlign: "center", padding: "80px 24px", color: "var(--text-muted)" }}>
-          <BookmarkX size={48} style={{ margin: "0 auto 16px", opacity: 0.3 }} />
-          <p style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: 8 }}>
-            Bookmarks coming soon
-          </p>
-          <p style={{ fontSize: "0.875rem" }}>
-            Save articles by clicking the bookmark button on any article
-          </p>
-        </div>
+        <>
+          {loadingBookmarks ? (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 24 }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "var(--radius-lg)", height: 300, animation: "pulse 1.5s ease-in-out infinite" }} />
+              ))}
+            </div>
+          ) : bookmarks.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "80px 24px", color: "var(--text-muted)" }}>
+              <BookmarkX size={48} style={{ margin: "0 auto 16px", opacity: 0.3 }} />
+              <p style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: 8 }}>No saved articles</p>
+              <p style={{ fontSize: "0.875rem", marginBottom: 20 }}>
+                Bookmark articles by clicking the Save button while reading
+              </p>
+              <Link href="/articles">
+                <button style={{ padding: "10px 24px", borderRadius: "var(--radius-full)", background: "var(--gradient-primary)", border: "none", color: "white", fontWeight: 600, cursor: "pointer", boxShadow: "0 4px 12px rgba(124,111,255,0.3)" }}>
+                  Browse articles
+                </button>
+              </Link>
+            </div>
+          ) : (
+            <motion.div variants={container} initial="hidden" animate="show" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 24 }}>
+              {bookmarks.map((article) => (
+                <motion.div key={article.id} variants={item} style={{ position: "relative" }}>
+                  <ArticleCard article={article} />
+                  <button
+                    onClick={async () => {
+                      try {
+                        await api.delete(`/bookmarks/remove_bookmark/${article.id}/`);
+                        handleBookmarkRemoved(article.id);
+                        toast.success("Bookmark removed");
+                      } catch {
+                        toast.error("Failed to remove bookmark");
+                      }
+                    }}
+                    style={{ position: "absolute", top: 12, right: 12, zIndex: 2, padding: "6px 10px", borderRadius: "var(--radius-md)", background: "var(--bg-elevated)", border: "1px solid var(--border-color)", color: "var(--accent-primary)", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: "0.75rem", fontWeight: 500 }}
+                  >
+                    <BookmarkX size={12} />
+                    Remove
+                  </button>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </>
       )}
 
       {/* Following tab */}
