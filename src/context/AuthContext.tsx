@@ -25,16 +25,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refetchUser = useCallback(async () => {
+    setLoading(true);
     try {
       const { data } = await api.get("/auth/user/");
       setUser(data);
     } catch {
       setUser(null);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    refetchUser().finally(() => setLoading(false));
+    refetchUser();
   }, [refetchUser]);
 
   const login = async (email: string, password: string) => {
@@ -47,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await api.post("/auth/logout/");
     } finally {
       setUser(null);
+      setLoading(false);
     }
   };
 

@@ -115,7 +115,7 @@ export default function Footer() {
           © {new Date().getFullYear()} Chapbook. All rights reserved.
         </p>
         <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: 0 }}>
-          Built for writers, by writers.
+          Built for writers, by Edema Ukabi.
         </p>
       </div>
     </footer>

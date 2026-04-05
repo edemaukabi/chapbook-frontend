@@ -22,8 +22,8 @@ function LoginForm() {
     if (!authLoading && user) router.replace(next);
   }, [user, authLoading, next, router]);
 
-  // Don't flash the form while auth is resolving
-  if (authLoading) return null;
+  // Hold the space while auth resolves — prevents form flash
+  if (authLoading) return <div style={{ minHeight: "80vh" }} />;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

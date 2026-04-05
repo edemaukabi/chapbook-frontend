@@ -25,7 +25,7 @@ export default function RegisterPage() {
     if (!authLoading && user) router.replace("/dashboard");
   }, [user, authLoading, router]);
 
-  if (authLoading) return null;
+  if (authLoading) return <div style={{ minHeight: "80vh" }} />;
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((prev) => ({ ...prev, [key]: e.target.value }));
