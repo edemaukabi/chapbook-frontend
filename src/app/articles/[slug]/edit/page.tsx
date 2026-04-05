@@ -56,12 +56,10 @@ export default function EditArticlePage({
   useEffect(() => {
     const load = async () => {
       try {
-        // Use search to look up the UUID from the slug
-        const { data: searchData } = await api.get("/elastic/search/", {
-          params: { search: slug },
-        });
-        const results = searchData.results ?? [];
-        const match = results.find((a: { slug: string }) => a.slug === slug);
+        // Look up UUID from slug using the slug filter on the DRF endpoint
+        const { data: listData } = await api.get(`/articles/?slug=${encodeURIComponent(slug)}`);
+        const results: Article[] = listData.articles?.results ?? listData.results ?? [];
+        const match = results.find((a: Article) => a.slug === slug);
         if (!match) {
           toast.error("Article not found");
           router.replace("/dashboard");

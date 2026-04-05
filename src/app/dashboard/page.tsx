@@ -19,11 +19,84 @@ const container = {
 };
 const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
 
+function DeleteModal({ title, onConfirm, onCancel, deleting }: {
+  title: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  deleting: boolean;
+}) {
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 1000,
+        background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 16,
+      }}
+      onClick={onCancel}
+    >
+      <div
+        style={{
+          background: "var(--bg-elevated)", border: "1px solid var(--border-color)",
+          borderRadius: "var(--radius-xl)", padding: "32px 28px",
+          maxWidth: 420, width: "100%", boxShadow: "var(--shadow-lg)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ marginBottom: 20 }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: "50%",
+            background: "rgba(255,107,107,0.15)", display: "flex",
+            alignItems: "center", justifyContent: "center", marginBottom: 16,
+          }}>
+            <Trash2 size={22} style={{ color: "var(--accent-secondary)" }} />
+          </div>
+          <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
+            Delete article?
+          </h3>
+          <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", lineHeight: 1.6 }}>
+            <strong>&ldquo;{title}&rdquo;</strong> will be permanently deleted. This cannot be undone.
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <button
+            onClick={onCancel}
+            disabled={deleting}
+            style={{
+              padding: "9px 20px", borderRadius: "var(--radius-full)",
+              border: "1px solid var(--border-color)", background: "transparent",
+              color: "var(--text-secondary)", fontWeight: 500, fontSize: "0.875rem",
+              cursor: "pointer",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={deleting}
+            style={{
+              padding: "9px 20px", borderRadius: "var(--radius-full)",
+              border: "none", background: "var(--accent-secondary)",
+              color: "white", fontWeight: 600, fontSize: "0.875rem",
+              cursor: deleting ? "not-allowed" : "pointer",
+              opacity: deleting ? 0.7 : 1,
+              display: "flex", alignItems: "center", gap: 6,
+            }}
+          >
+            <Trash2 size={14} />
+            {deleting ? "Deleting…" : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MyArticleCard({ article, onDelete }: { article: Article; onDelete: (id: string) => void }) {
   const [deleting, setDeleting] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   const handleDelete = async () => {
-    if (!confirm("Delete this article? This cannot be undone.")) return;
     setDeleting(true);
     try {
       await api.delete(`/articles/${article.id}/`);
@@ -31,67 +104,55 @@ function MyArticleCard({ article, onDelete }: { article: Article; onDelete: (id:
       toast.success("Article deleted");
     } catch {
       toast.error("Failed to delete article");
-    } finally {
       setDeleting(false);
     }
+    setShowModal(false);
   };
 
   return (
-    <div style={{ position: "relative" }}>
-      <ArticleCard article={article} />
-      <div
-        style={{
-          position: "absolute",
-          top: 12,
-          right: 12,
-          display: "flex",
-          gap: 6,
-          zIndex: 2,
-        }}
-      >
-        <Link href={`/articles/${article.slug}/edit`}>
+    <>
+      {showModal && (
+        <DeleteModal
+          title={article.title}
+          onConfirm={handleDelete}
+          onCancel={() => setShowModal(false)}
+          deleting={deleting}
+        />
+      )}
+      <div style={{ position: "relative" }}>
+        <ArticleCard article={article} />
+        <div style={{ position: "absolute", top: 12, right: 12, display: "flex", gap: 6, zIndex: 2 }}>
+          <Link href={`/articles/${article.slug}/edit`}>
+            <button
+              style={{
+                padding: "6px 10px", borderRadius: "var(--radius-md)",
+                background: "var(--bg-elevated)", border: "1px solid var(--border-color)",
+                color: "var(--text-secondary)", cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 4,
+                fontSize: "0.75rem", fontWeight: 500,
+              }}
+            >
+              <Edit2 size={12} />
+              Edit
+            </button>
+          </Link>
           <button
+            onClick={() => setShowModal(true)}
+            disabled={deleting}
             style={{
-              padding: "6px 10px",
-              borderRadius: "var(--radius-md)",
-              background: "var(--bg-elevated)",
-              border: "1px solid var(--border-color)",
-              color: "var(--text-secondary)",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              fontSize: "0.75rem",
-              fontWeight: 500,
+              padding: "6px 10px", borderRadius: "var(--radius-md)",
+              background: "var(--bg-elevated)", border: "1px solid var(--border-color)",
+              color: "var(--accent-secondary)", cursor: deleting ? "not-allowed" : "pointer",
+              display: "flex", alignItems: "center", gap: 4,
+              fontSize: "0.75rem", fontWeight: 500, opacity: deleting ? 0.6 : 1,
             }}
           >
-            <Edit2 size={12} />
-            Edit
+            <Trash2 size={12} />
+            Delete
           </button>
-        </Link>
-        <button
-          onClick={handleDelete}
-          disabled={deleting}
-          style={{
-            padding: "6px 10px",
-            borderRadius: "var(--radius-md)",
-            background: "var(--bg-elevated)",
-            border: "1px solid var(--border-color)",
-            color: "var(--accent-secondary)",
-            cursor: deleting ? "not-allowed" : "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            fontSize: "0.75rem",
-            fontWeight: 500,
-            opacity: deleting ? 0.6 : 1,
-          }}
-        >
-          <Trash2 size={12} />
-          Delete
-        </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
