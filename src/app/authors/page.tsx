@@ -11,9 +11,9 @@ async function getAuthors(): Promise<Profile[]> {
       { next: { revalidate: 60 } }
     );
     if (!res.ok) return [];
-    const data: { profiles?: Profile[]; results?: Profile[]; next?: string } =
-      await res.json();
-    return data.profiles ?? data.results ?? [];
+    const data = await res.json();
+    // ProfilesJSONRenderer wraps as { profiles: { count, results: [...] } }
+    return data.profiles?.results ?? data.profiles ?? data.results ?? [];
   } catch {
     return [];
   }
@@ -75,29 +75,7 @@ function AuthorCard({ author }: { author: Profile }) {
       href={`/authors/${author.id}`}
       style={{ textDecoration: "none" }}
     >
-      <div
-        style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border-color)",
-          borderRadius: "var(--radius-lg)",
-          padding: 24,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 14,
-          textAlign: "center",
-          transition: "border-color var(--transition-fast), transform var(--transition-fast)",
-          cursor: "pointer",
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLDivElement).style.borderColor = "var(--accent-primary)";
-          (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-color)";
-          (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
-        }}
-      >
+      <div className="author-card">
         {author.profile_photo ? (
           <div style={{ width: 72, height: 72, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}>
             <Image

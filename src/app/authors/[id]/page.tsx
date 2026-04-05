@@ -15,8 +15,9 @@ async function getProfile(id: string): Promise<Profile | null> {
       next: { revalidate: 60 },
     });
     if (!res.ok) return null;
-    const data: { profiles?: Profile[]; results?: Profile[] } = await res.json();
-    const profiles: Profile[] = data.profiles ?? data.results ?? [];
+    const data = await res.json();
+    // ProfilesJSONRenderer wraps as { profiles: { count, results: [...] } }
+    const profiles: Profile[] = data.profiles?.results ?? data.profiles ?? data.results ?? [];
     return profiles.find((p) => p.id === id) ?? null;
   } catch {
     return null;
