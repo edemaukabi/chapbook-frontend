@@ -3,6 +3,30 @@ import { PenSquare, BookOpen, Users, Zap } from "lucide-react";
 import ArticleCard from "@/components/articles/ArticleCard";
 import type { Article } from "@/types";
 
+interface Stats {
+  articleCount: number;
+  writerCount: number;
+}
+
+async function getStats(): Promise<Stats> {
+  try {
+    const [articleRes, profileRes] = await Promise.all([
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/articles/?page=1`, { next: { revalidate: 60 } }),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/profiles/all/?page=1`, { next: { revalidate: 60 } }),
+    ]);
+    const [articleData, profileData] = await Promise.all([
+      articleRes.ok ? articleRes.json() : null,
+      profileRes.ok ? profileRes.json() : null,
+    ]);
+    return {
+      articleCount: articleData?.articles?.count ?? articleData?.count ?? 0,
+      writerCount: profileData?.profiles?.count ?? profileData?.count ?? 0,
+    };
+  } catch {
+    return { articleCount: 0, writerCount: 0 };
+  }
+}
+
 async function getArticles(): Promise<Article[]> {
   try {
     const res = await fetch(
@@ -18,8 +42,13 @@ async function getArticles(): Promise<Article[]> {
   }
 }
 
+function formatCount(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}K`;
+  return n.toString();
+}
+
 export default async function HomePage() {
-  const articles = await getArticles();
+  const [articles, stats] = await Promise.all([getArticles(), getStats()]);
 
   return (
     <>
@@ -109,32 +138,33 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <div
-            style={{
-              display: "flex", gap: 40, justifyContent: "center",
-              marginTop: 56, flexWrap: "wrap",
-            }}
-          >
-            {[
-              { label: "Articles published", value: "1,000+" },
-              { label: "Writers", value: "500+" },
-              { label: "Readers", value: "10K+" },
-            ].map(({ label, value }) => (
-              <div key={label} style={{ textAlign: "center" }}>
-                <p
-                  style={{
-                    fontSize: "1.75rem", fontWeight: 800,
-                    background: "var(--gradient-primary)",
-                    WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
-                  }}
-                >
-                  {value}
-                </p>
-                <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>{label}</p>
-              </div>
-            ))}
-          </div>
+          {(stats.articleCount > 0 || stats.writerCount > 0) && (
+            <div
+              style={{
+                display: "flex", gap: 40, justifyContent: "center",
+                marginTop: 56, flexWrap: "wrap",
+              }}
+            >
+              {[
+                { label: "Articles published", value: formatCount(stats.articleCount) },
+                { label: "Writers", value: formatCount(stats.writerCount) },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ textAlign: "center" }}>
+                  <p
+                    style={{
+                      fontSize: "1.75rem", fontWeight: 800,
+                      background: "var(--gradient-primary)",
+                      WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                    }}
+                  >
+                    {value}
+                  </p>
+                  <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>{label}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -225,7 +255,7 @@ export default async function HomePage() {
                 letterSpacing: "-0.02em", marginBottom: 14, position: "relative",
               }}
             >
-              Join thousands of{" "}
+              Join {stats.writerCount > 0 ? formatCount(stats.writerCount) : "a growing community of"}{" "}
               <span className="gradient-text">writers &amp; readers</span>
             </h2>
             <p
