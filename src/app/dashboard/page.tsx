@@ -93,6 +93,77 @@ function DeleteModal({ title, onConfirm, onCancel, deleting }: {
   );
 }
 
+function SavedArticleCard({ article, onRemove }: { article: Article; onRemove: (id: string) => void }) {
+  const [removing, setRemoving] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const handleRemove = async () => {
+    setRemoving(true);
+    try {
+      await api.delete(`/bookmarks/remove_bookmark/${article.id}/`);
+      onRemove(article.id);
+      toast.success("Bookmark removed");
+    } catch {
+      toast.error("Failed to remove bookmark");
+      setRemoving(false);
+    }
+    setShowConfirm(false);
+  };
+
+  return (
+    <>
+      {showConfirm && (
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          onClick={() => setShowConfirm(false)}
+        >
+          <div
+            style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-color)", borderRadius: "var(--radius-xl)", padding: "32px 28px", maxWidth: 400, width: "100%", boxShadow: "var(--shadow-lg)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(124,111,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+              <BookmarkX size={22} style={{ color: "var(--accent-primary)" }} />
+            </div>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
+              Remove bookmark?
+            </h3>
+            <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 20 }}>
+              <strong>&ldquo;{article.title}&rdquo;</strong> will be removed from your saved articles.
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setShowConfirm(false)}
+                disabled={removing}
+                style={{ padding: "9px 20px", borderRadius: "var(--radius-full)", border: "1px solid var(--border-color)", background: "transparent", color: "var(--text-secondary)", fontWeight: 500, fontSize: "0.875rem", cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRemove}
+                disabled={removing}
+                style={{ padding: "9px 20px", borderRadius: "var(--radius-full)", border: "none", background: "var(--gradient-primary)", color: "white", fontWeight: 600, fontSize: "0.875rem", cursor: removing ? "not-allowed" : "pointer", opacity: removing ? 0.7 : 1, display: "flex", alignItems: "center", gap: 6 }}
+              >
+                <BookmarkX size={14} />
+                {removing ? "Removing…" : "Remove"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <div style={{ position: "relative" }}>
+        <ArticleCard article={article} />
+        <button
+          onClick={() => setShowConfirm(true)}
+          style={{ position: "absolute", top: 12, right: 12, zIndex: 2, padding: "6px 10px", borderRadius: "var(--radius-md)", background: "var(--bg-elevated)", border: "1px solid var(--border-color)", color: "var(--accent-primary)", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: "0.75rem", fontWeight: 500 }}
+        >
+          <BookmarkX size={12} />
+          Remove
+        </button>
+      </div>
+    </>
+  );
+}
+
 function MyArticleCard({ article, onDelete }: { article: Article; onDelete: (id: string) => void }) {
   const [deleting, setDeleting] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -536,23 +607,8 @@ export default function DashboardPage() {
           ) : (
             <motion.div variants={container} initial="hidden" animate="show" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 24 }}>
               {bookmarks.map((article) => (
-                <motion.div key={article.id} variants={item} style={{ position: "relative" }}>
-                  <ArticleCard article={article} />
-                  <button
-                    onClick={async () => {
-                      try {
-                        await api.delete(`/bookmarks/remove_bookmark/${article.id}/`);
-                        handleBookmarkRemoved(article.id);
-                        toast.success("Bookmark removed");
-                      } catch {
-                        toast.error("Failed to remove bookmark");
-                      }
-                    }}
-                    style={{ position: "absolute", top: 12, right: 12, zIndex: 2, padding: "6px 10px", borderRadius: "var(--radius-md)", background: "var(--bg-elevated)", border: "1px solid var(--border-color)", color: "var(--accent-primary)", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: "0.75rem", fontWeight: 500 }}
-                  >
-                    <BookmarkX size={12} />
-                    Remove
-                  </button>
+                <motion.div key={article.id} variants={item}>
+                  <SavedArticleCard article={article} onRemove={handleBookmarkRemoved} />
                 </motion.div>
               ))}
             </motion.div>
