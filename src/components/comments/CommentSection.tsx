@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { MessageCircle, Send, ChevronDown, Reply, Trash2, Edit2 } from "lucide-react";
+import { MessageCircle, Send, ChevronDown, Reply, Trash2, Edit2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -11,6 +11,7 @@ import type { Comment } from "@/types";
 
 const PAGE_SIZE = 5;
 const TRUNCATE_AT = 300;
+const REPLIES_PREVIEW = 2;
 
 function CommentText({ content }: { content: string }) {
   const [expanded, setExpanded] = useState(false);
@@ -56,6 +57,69 @@ function Avatar({ name }: { name: string }) {
       }}
     >
       {name?.[0]?.toUpperCase() ?? "?"}
+    </div>
+  );
+}
+
+interface ReplyListProps {
+  replies: Comment[];
+  articleId: string;
+  onDeleted: (id: string) => void;
+  onReplyPosted: (reply: Comment) => void;
+}
+
+function ReplyList({ replies, articleId, onDeleted, onReplyPosted }: ReplyListProps) {
+  const [showAll, setShowAll] = useState(false);
+  const visible = showAll ? replies : replies.slice(0, REPLIES_PREVIEW);
+  const hidden = replies.length - REPLIES_PREVIEW;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {visible.map((reply) => (
+        <CommentItem
+          key={reply.id}
+          comment={reply}
+          articleId={articleId}
+          onDeleted={onDeleted}
+          onReplyPosted={onReplyPosted}
+          depth={1}
+        />
+      ))}
+      {!showAll && hidden > 0 && (
+        <button
+          onClick={() => setShowAll(true)}
+          style={{
+            marginLeft: 40,
+            background: "none",
+            border: "none",
+            color: "var(--accent-primary)",
+            cursor: "pointer",
+            fontSize: "0.8rem",
+            fontWeight: 600,
+            padding: 0,
+            textAlign: "left",
+          }}
+        >
+          Show {hidden} more {hidden === 1 ? "reply" : "replies"}
+        </button>
+      )}
+      {showAll && replies.length > REPLIES_PREVIEW && (
+        <button
+          onClick={() => setShowAll(false)}
+          style={{
+            marginLeft: 40,
+            background: "none",
+            border: "none",
+            color: "var(--text-muted)",
+            cursor: "pointer",
+            fontSize: "0.8rem",
+            padding: 0,
+            textAlign: "left",
+          }}
+        >
+          Show fewer replies
+        </button>
+      )}
     </div>
   );
 }
@@ -297,12 +361,18 @@ export default function CommentSection({ articleId }: { articleId: string }) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [replies, setReplies] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [posting, setPosting] = useState(false);
 
   const fetchComments = async (pageNum = 1) => {
+    if (pageNum === 1) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
     try {
       const { data } = await api.get(`/responses/article/${articleId}/`, {
         params: { page: pageNum, page_size: PAGE_SIZE },
@@ -319,6 +389,7 @@ export default function CommentSection({ articleId }: { articleId: string }) {
       // silently fail
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -356,6 +427,8 @@ export default function CommentSection({ articleId }: { articleId: string }) {
 
   const getReplies = (commentId: string) =>
     replies.filter((r) => r.parent_response === commentId);
+
+  const totalCount = comments.length + replies.length;
 
   return (
     <div>
@@ -395,7 +468,7 @@ export default function CommentSection({ articleId }: { articleId: string }) {
               padding: "0 6px",
             }}
           >
-            {comments.length}
+            {loading ? "…" : totalCount}
           </span>
         </span>
         <ChevronDown
@@ -496,47 +569,55 @@ export default function CommentSection({ articleId }: { articleId: string }) {
         </p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          {comments.map((comment) => (
-            <div key={comment.id} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <CommentItem
-                comment={comment}
-                articleId={articleId}
-                onDeleted={handleDeleted}
-                onReplyPosted={handleReplyPosted}
-              />
-              {getReplies(comment.id).map((reply) => (
+          {comments.map((comment) => {
+            const commentReplies = getReplies(comment.id);
+            return (
+              <div key={comment.id} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <CommentItem
-                  key={reply.id}
-                  comment={reply}
+                  comment={comment}
                   articleId={articleId}
                   onDeleted={handleDeleted}
                   onReplyPosted={handleReplyPosted}
-                  depth={1}
                 />
-              ))}
-            </div>
-          ))}
+                {commentReplies.length > 0 && (
+                  <ReplyList
+                    replies={commentReplies}
+                    articleId={articleId}
+                    onDeleted={handleDeleted}
+                    onReplyPosted={handleReplyPosted}
+                  />
+                )}
+              </div>
+            );
+          })}
 
           {hasMore && (
             <button
               onClick={() => fetchComments(page + 1)}
+              disabled={loadingMore}
               style={{
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: 6,
                 background: "none",
                 border: "1px solid var(--border-color)",
                 borderRadius: "var(--radius-full)",
-                color: "var(--text-secondary)",
+                color: loadingMore ? "var(--text-muted)" : "var(--text-secondary)",
                 padding: "8px 20px",
-                cursor: "pointer",
+                cursor: loadingMore ? "default" : "pointer",
                 fontSize: "0.85rem",
                 margin: "0 auto",
                 transition: "border-color var(--transition-fast)",
+                minWidth: 160,
               }}
             >
-              <ChevronDown size={14} />
-              Load more comments
+              {loadingMore ? (
+                <Loader2 size={14} style={{ animation: "spin 0.8s linear infinite" }} />
+              ) : (
+                <ChevronDown size={14} />
+              )}
+              {loadingMore ? "Loading…" : "Load more comments"}
             </button>
           )}
         </div>
