@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { MessageCircle, Send, ChevronDown, Reply, Trash2, Edit2 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -292,6 +293,7 @@ function CommentItem({ comment, articleId, onDeleted, onReplyPosted, depth = 0 }
 
 export default function CommentSection({ articleId }: { articleId: string }) {
   const { user } = useAuth();
+  const [expanded, setExpanded] = useState(true);
   const [comments, setComments] = useState<Comment[]>([]);
   const [replies, setReplies] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -357,20 +359,72 @@ export default function CommentSection({ articleId }: { articleId: string }) {
 
   return (
     <div>
-      <h3
+      {/* Collapsible header */}
+      <button
+        onClick={() => setExpanded((v) => !v)}
         style={{
-          fontSize: "1.1rem",
-          fontWeight: 700,
-          marginBottom: 24,
+          width: "100%",
           display: "flex",
           alignItems: "center",
-          gap: 8,
-          color: "var(--text-primary)",
+          justifyContent: "space-between",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-color)",
+          borderRadius: expanded ? "var(--radius-lg) var(--radius-lg) 0 0" : "var(--radius-lg)",
+          padding: "14px 20px",
+          cursor: "pointer",
+          marginBottom: 0,
+          transition: "border-radius var(--transition-fast)",
         }}
       >
-        <MessageCircle size={18} />
-        {comments.length} Comment{comments.length !== 1 ? "s" : ""}
-      </h3>
+        <span style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: "1rem", color: "var(--text-primary)" }}>
+          <MessageCircle size={17} style={{ color: "var(--accent-primary)" }} />
+          Discussion
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minWidth: 22,
+              height: 22,
+              borderRadius: "var(--radius-full)",
+              background: "rgba(124,111,255,0.15)",
+              border: "1px solid rgba(124,111,255,0.3)",
+              color: "var(--accent-primary)",
+              fontSize: "0.72rem",
+              fontWeight: 700,
+              padding: "0 6px",
+            }}
+          >
+            {comments.length}
+          </span>
+        </span>
+        <ChevronDown
+          size={16}
+          style={{
+            color: "var(--text-muted)",
+            transition: "transform var(--transition-fast)",
+            transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
+          }}
+        />
+      </button>
+
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            style={{ overflow: "hidden" }}
+          >
+            <div
+              style={{
+                background: "var(--bg-card)",
+                border: "1px solid var(--border-color)",
+                borderTop: "none",
+                borderRadius: "0 0 var(--radius-lg) var(--radius-lg)",
+                padding: "24px 20px",
+              }}
+            >
 
       {/* New comment input */}
       <div style={{ marginBottom: 32 }}>
@@ -487,6 +541,10 @@ export default function CommentSection({ articleId }: { articleId: string }) {
           )}
         </div>
       )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
