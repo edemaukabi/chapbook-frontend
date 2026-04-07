@@ -6,7 +6,7 @@ import FollowButton from "@/components/profile/FollowButton";
 import ArticleCard from "@/components/articles/ArticleCard";
 import type { Profile, Article } from "@/types";
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+const API = process.env.INTERNAL_API_URL;
 
 async function getProfile(id: string): Promise<Profile | null> {
   try {
