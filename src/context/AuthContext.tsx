@@ -38,8 +38,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refetchUser]);
 
   const login = async (email: string, password: string) => {
-    await api.post("/auth/login/", { email, password });
-    await refetchUser();
+    const { data } = await api.post("/auth/login/", { email, password });
+    // dj-rest-auth includes user details in the login response body.
+    // Use it directly instead of a second round-trip to /auth/user/ that
+    // can fail if cross-origin cookies haven't been stored yet.
+    if (data?.user) {
+      setUser(data.user);
+    } else {
+      await refetchUser();
+    }
   };
 
   const logout = async () => {

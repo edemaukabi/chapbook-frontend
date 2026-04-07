@@ -32,7 +32,9 @@ function LoginForm() {
     try {
       await login(email, password);
       toast.success("Welcome back!");
-      router.replace(next);
+      // Redirect is handled by the useEffect above once user state propagates.
+      // Calling router.replace here races with React's state update and can
+      // cause the dashboard to render before user is set, triggering a redirect loop.
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { non_field_errors?: string[]; detail?: string } } })
