@@ -28,8 +28,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data } = await api.get("/auth/user/");
       setUser(data);
-    } catch {
-      setUser(null);
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 401) {
+        // Access token may be expired — try refreshing before treating as logged out.
+        // The axios interceptor skips refresh for /auth/user/ to avoid loops, so we
+        // handle it explicitly here.
+        try {
+          await api.post("/auth/token/refresh/", {});
+          const { data } = await api.get("/auth/user/");
+          setUser(data);
+        } catch {
+          setUser(null); // Refresh also failed — session is genuinely expired
+        }
+      } else {
+        setUser(null);
+      }
     }
   }, []);
 
