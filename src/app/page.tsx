@@ -12,7 +12,7 @@ interface Stats {
 async function getStats(): Promise<Stats> {
   try {
     const res = await fetch(
-      `${process.env.INTERNAL_API_URL}/articles/stats/`,
+      `${process.env.NEXT_PUBLIC_API_URL}/articles/stats/`,
       { next: { revalidate: 60 } }
     );
     if (!res.ok) return { articleCount: 0, writerCount: 0, readerCount: 0 };
@@ -30,7 +30,7 @@ async function getStats(): Promise<Stats> {
 async function getArticles(): Promise<Article[]> {
   try {
     const res = await fetch(
-      `${process.env.INTERNAL_API_URL}/articles/?ordering=-created_at&page=1`,
+      `${process.env.NEXT_PUBLIC_API_URL}/articles/?ordering=-created_at&page=1`,
       { cache: "no-store" }
     );
     if (!res.ok) return [];

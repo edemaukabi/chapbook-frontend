@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const { data } = await api.get("/auth/user/");
           setUser(data);
         } catch {
-          setUser(null);
+          setUser(null); // Refresh also failed — session is genuinely expired
         }
       } else {
         setUser(null);

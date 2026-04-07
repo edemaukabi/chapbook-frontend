@@ -16,7 +16,7 @@ async function getArticle(slug: string): Promise<Article | null> {
 
     // Look up by slug filter — public endpoint, no auth needed for listing
     const listRes = await fetch(
-      `${process.env.INTERNAL_API_URL}/articles/?slug=${encodeURIComponent(slug)}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/articles/?slug=${encodeURIComponent(slug)}`,
       {
         next: { revalidate: 30 },
         headers: cookieHeader ? { Cookie: cookieHeader } : {},
@@ -33,7 +33,7 @@ async function getArticle(slug: string): Promise<Article | null> {
 
     // Fetch full article detail by UUID for view recording and full data
     const detailRes = await fetch(
-      `${process.env.INTERNAL_API_URL}/articles/${match.id}/`,
+      `${process.env.NEXT_PUBLIC_API_URL}/articles/${match.id}/`,
       {
         next: { revalidate: 30 },
         headers: cookieHeader ? { Cookie: cookieHeader } : {},
