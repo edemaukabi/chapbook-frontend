@@ -274,6 +274,17 @@ video {
   color: var(--text-primary);
 }
 
+.footer-attribution-link {
+  color: var(--text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color var(--transition-fast);
+}
+
+.footer-attribution-link:hover {
+  color: var(--accent-primary);
+}
+
 .author-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);

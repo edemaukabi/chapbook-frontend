@@ -120,9 +120,7 @@ export default function Footer() {
             href="https://edemaukabi.dev"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: "var(--text-muted)", textDecoration: "underline", textUnderlineOffset: "3px" }}
-            onMouseEnter={e => (e.currentTarget.style.color = "var(--accent-primary)")}
-            onMouseLeave={e => (e.currentTarget.style.color = "var(--text-muted)")}
+            className="footer-attribution-link"
           >
             Edema Ukabi
           </a>
