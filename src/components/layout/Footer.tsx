@@ -115,7 +115,18 @@ export default function Footer() {
           © {new Date().getFullYear()} Chapbook. All rights reserved.
         </p>
         <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: 0 }}>
-          Built for writers, by Edema Ukabi.
+          Built for writers, by{" "}
+          <a
+            href="https://edemaukabi.dev"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "var(--text-muted)", textDecoration: "underline", textUnderlineOffset: "3px" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "var(--accent-primary)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "var(--text-muted)")}
+          >
+            Edema Ukabi
+          </a>
+          .
         </p>
       </div>
     </footer>
