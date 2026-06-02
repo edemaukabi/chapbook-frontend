@@ -2,18 +2,23 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { BookOpen, ArrowLeft } from "lucide-react";
+import { BookOpen, ArrowLeft, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email.trim()) { setEmailError("Email is required"); return; }
+    if (!emailRegex.test(email)) { setEmailError("Enter a valid email address"); return; }
+    setEmailError("");
     setLoading(true);
     try {
       await api.post("/auth/password/reset/", { email });
@@ -71,7 +76,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         {!sent && (
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <form onSubmit={handleSubmit} noValidate style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
               <label style={{ display: "block", marginBottom: 6, fontSize: "0.85rem", fontWeight: 500, color: "var(--text-secondary)" }}>
                 Email
@@ -79,25 +84,31 @@ export default function ForgotPasswordPage() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); if (emailError) setEmailError(""); }}
                 placeholder="you@example.com"
                 style={{
                   width: "100%",
                   padding: "12px 14px",
                   background: "var(--bg-elevated)",
-                  border: "1px solid var(--border-color)",
+                  border: `1px solid ${emailError ? "var(--error)" : "var(--border-color)"}`,
                   borderRadius: "var(--radius-md)",
                   color: "var(--text-primary)",
                   fontSize: "0.95rem",
                   outline: "none",
                 }}
-                onFocus={(e) => (e.target.style.borderColor = "var(--accent-primary)")}
-                onBlur={(e) => (e.target.style.borderColor = "var(--border-color)")}
+                onFocus={(e) => { if (!emailError) e.target.style.borderColor = "var(--accent-primary)"; }}
+                onBlur={(e) => { e.target.style.borderColor = emailError ? "var(--error)" : "var(--border-color)"; }}
               />
+              {emailError && (
+                <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 5, fontSize: "0.8rem", color: "var(--error)", fontWeight: 500 }}>
+                  <AlertCircle size={12} />
+                  {emailError}
+                </div>
+              )}
             </div>
             <button
               type="submit"
-              disabled={loading || !email}
+              disabled={loading}
               style={{
                 padding: "12px",
                 borderRadius: "var(--radius-md)",
@@ -106,8 +117,8 @@ export default function ForgotPasswordPage() {
                 color: "white",
                 fontWeight: 700,
                 fontSize: "0.95rem",
-                cursor: loading || !email ? "not-allowed" : "pointer",
-                opacity: loading || !email ? 0.7 : 1,
+                cursor: loading ? "not-allowed" : "pointer",
+                opacity: loading ? 0.7 : 1,
               }}
             >
               {loading ? "Sending…" : "Send reset link"}

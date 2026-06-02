@@ -3,9 +3,21 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, BookOpen } from "lucide-react";
+import { Eye, EyeOff, BookOpen, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function FieldError({ msg }: { msg: string }) {
+  if (!msg) return null;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 5, fontSize: "0.8rem", color: "var(--error)", fontWeight: 500 }}>
+      <AlertCircle size={12} />
+      {msg}
+    </div>
+  );
+}
 
 function LoginForm() {
   const router = useRouter();
@@ -14,6 +26,7 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
 
   const next = searchParams.get("next") ?? "/dashboard";
@@ -27,7 +40,11 @@ function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) { toast.error("Please fill in all fields"); return; }
+    const newErrors = { email: "", password: "" };
+    if (!email.trim()) newErrors.email = "Email is required";
+    else if (!emailRegex.test(email)) newErrors.email = "Enter a valid email address";
+    if (!password) newErrors.password = "Password is required";
+    if (newErrors.email || newErrors.password) { setErrors(newErrors); return; }
     setLoading(true);
     try {
       await login(email, password);
@@ -103,7 +120,7 @@ function LoginForm() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <form onSubmit={handleSubmit} noValidate style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div>
             <label style={{ display: "block", marginBottom: 6, fontSize: "0.85rem", fontWeight: 500, color: "var(--text-secondary)" }}>
               Email
@@ -111,13 +128,14 @@ function LoginForm() {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); if (errors.email) setErrors((p) => ({ ...p, email: "" })); }}
               placeholder="you@example.com"
               autoComplete="email"
-              style={inputStyle}
-              onFocus={(e) => (e.target.style.borderColor = "var(--accent-primary)")}
-              onBlur={(e) => (e.target.style.borderColor = "var(--border-color)")}
+              style={{ ...inputStyle, ...(errors.email ? { borderColor: "var(--error)" } : {}) }}
+              onFocus={(e) => { if (!errors.email) e.target.style.borderColor = "var(--accent-primary)"; }}
+              onBlur={(e) => { e.target.style.borderColor = errors.email ? "var(--error)" : "var(--border-color)"; }}
             />
+            <FieldError msg={errors.email} />
           </div>
 
           <div>
@@ -128,12 +146,12 @@ function LoginForm() {
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => { setPassword(e.target.value); if (errors.password) setErrors((p) => ({ ...p, password: "" })); }}
                 placeholder="••••••••"
                 autoComplete="current-password"
-                style={{ ...inputStyle, paddingRight: 44 }}
-                onFocus={(e) => (e.target.style.borderColor = "var(--accent-primary)")}
-                onBlur={(e) => (e.target.style.borderColor = "var(--border-color)")}
+                style={{ ...inputStyle, paddingRight: 44, ...(errors.password ? { borderColor: "var(--error)" } : {}) }}
+                onFocus={(e) => { if (!errors.password) e.target.style.borderColor = "var(--accent-primary)"; }}
+                onBlur={(e) => { e.target.style.borderColor = errors.password ? "var(--error)" : "var(--border-color)"; }}
               />
               <button
                 type="button"
@@ -153,6 +171,7 @@ function LoginForm() {
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
+            <FieldError msg={errors.password} />
           </div>
 
           <div style={{ textAlign: "right" }}>

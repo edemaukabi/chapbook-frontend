@@ -3,9 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Eye, EyeOff, BookOpen, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, BookOpen, ArrowLeft, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
+
+function FieldError({ msg }: { msg: string }) {
+  if (!msg) return null;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 5, fontSize: "0.8rem", color: "var(--error)", fontWeight: 500 }}>
+      <AlertCircle size={12} />
+      {msg}
+    </div>
+  );
+}
 
 export default function ResetPasswordPage() {
   const { uid, token } = useParams<{ uid: string; token: string }>();
@@ -13,6 +23,7 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({ password: "", confirm: "" });
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -29,14 +40,12 @@ export default function ResetPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 8) {
-      toast.error("Password must be at least 8 characters.");
-      return;
-    }
-    if (password !== confirm) {
-      toast.error("Passwords do not match.");
-      return;
-    }
+    const newErrors = { password: "", confirm: "" };
+    if (!password) newErrors.password = "Password is required";
+    else if (password.length < 8) newErrors.password = "Password must be at least 8 characters";
+    if (!confirm) newErrors.confirm = "Please confirm your password";
+    else if (password !== confirm) newErrors.confirm = "Passwords do not match";
+    if (newErrors.password || newErrors.confirm) { setErrors(newErrors); return; }
     setLoading(true);
     try {
       await api.post("/auth/password/reset/confirm/", {
@@ -104,7 +113,7 @@ export default function ResetPasswordPage() {
         </div>
 
         {!done && (
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <form onSubmit={handleSubmit} noValidate style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
               <label style={{ display: "block", marginBottom: 6, fontSize: "0.85rem", fontWeight: 500, color: "var(--text-secondary)" }}>
                 New password
@@ -113,13 +122,12 @@ export default function ResetPasswordPage() {
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); if (errors.password) setErrors((p) => ({ ...p, password: "" })); }}
                   placeholder="Min. 8 characters"
                   autoComplete="new-password"
-                  style={{ ...inputStyle, paddingRight: 44 }}
-                  onFocus={(e) => (e.target.style.borderColor = "var(--accent-primary)")}
-                  onBlur={(e) => (e.target.style.borderColor = "var(--border-color)")}
-                  required
+                  style={{ ...inputStyle, paddingRight: 44, ...(errors.password ? { borderColor: "var(--error)" } : {}) }}
+                  onFocus={(e) => { if (!errors.password) e.target.style.borderColor = "var(--accent-primary)"; }}
+                  onBlur={(e) => { e.target.style.borderColor = errors.password ? "var(--error)" : "var(--border-color)"; }}
                 />
                 <button
                   type="button"
@@ -139,6 +147,7 @@ export default function ResetPasswordPage() {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              <FieldError msg={errors.password} />
             </div>
 
             <div>
@@ -148,19 +157,19 @@ export default function ResetPasswordPage() {
               <input
                 type="password"
                 value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
+                onChange={(e) => { setConfirm(e.target.value); if (errors.confirm) setErrors((p) => ({ ...p, confirm: "" })); }}
                 placeholder="Repeat your password"
                 autoComplete="new-password"
-                style={inputStyle}
-                onFocus={(e) => (e.target.style.borderColor = "var(--accent-primary)")}
-                onBlur={(e) => (e.target.style.borderColor = "var(--border-color)")}
-                required
+                style={{ ...inputStyle, ...(errors.confirm ? { borderColor: "var(--error)" } : {}) }}
+                onFocus={(e) => { if (!errors.confirm) e.target.style.borderColor = "var(--accent-primary)"; }}
+                onBlur={(e) => { e.target.style.borderColor = errors.confirm ? "var(--error)" : "var(--border-color)"; }}
               />
+              <FieldError msg={errors.confirm} />
             </div>
 
             <button
               type="submit"
-              disabled={loading || !password || !confirm}
+              disabled={loading}
               style={{
                 padding: "12px",
                 borderRadius: "var(--radius-md)",
@@ -169,8 +178,8 @@ export default function ResetPasswordPage() {
                 color: "white",
                 fontWeight: 700,
                 fontSize: "0.95rem",
-                cursor: loading || !password || !confirm ? "not-allowed" : "pointer",
-                opacity: loading || !password || !confirm ? 0.7 : 1,
+                cursor: loading ? "not-allowed" : "pointer",
+                opacity: loading ? 0.7 : 1,
                 marginTop: 4,
               }}
             >

@@ -3,10 +3,22 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, BookOpen } from "lucide-react";
+import { Eye, EyeOff, BookOpen, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function FieldError({ msg }: { msg: string }) {
+  if (!msg) return null;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 5, fontSize: "0.8rem", color: "var(--error)", fontWeight: 500 }}>
+      <AlertCircle size={12} />
+      {msg}
+    </div>
+  );
+}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -19,6 +31,7 @@ export default function RegisterPage() {
     password2: "",
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({ first_name: "", last_name: "", email: "", password1: "", password2: "" });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -27,15 +40,24 @@ export default function RegisterPage() {
 
   if (authLoading) return <div style={{ minHeight: "80vh" }} />;
 
-  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [key]: e.target.value }));
+    if (errors[key]) setErrors((p) => ({ ...p, [key]: "" }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.password1 !== form.password2) {
-      toast.error("Passwords do not match");
-      return;
-    }
+    const newErrors = { first_name: "", last_name: "", email: "", password1: "", password2: "" };
+    if (!form.first_name.trim()) newErrors.first_name = "First name is required";
+    if (!form.last_name.trim()) newErrors.last_name = "Last name is required";
+    if (!form.email.trim()) newErrors.email = "Email is required";
+    else if (!emailRegex.test(form.email)) newErrors.email = "Enter a valid email address";
+    if (!form.password1) newErrors.password1 = "Password is required";
+    else if (form.password1.length < 8) newErrors.password1 = "Password must be at least 8 characters";
+    if (!form.password2) newErrors.password2 = "Please confirm your password";
+    else if (form.password1 !== form.password2) newErrors.password2 = "Passwords do not match";
+    if (Object.values(newErrors).some(Boolean)) { setErrors(newErrors); return; }
+
     setLoading(true);
     try {
       await api.post("/auth/registration/", form);
@@ -68,10 +90,12 @@ export default function RegisterPage() {
     transition: "border-color var(--transition-fast)",
   };
 
-  const focus = (e: React.FocusEvent<HTMLInputElement>) =>
-    (e.target.style.borderColor = "var(--accent-primary)");
-  const blur = (e: React.FocusEvent<HTMLInputElement>) =>
-    (e.target.style.borderColor = "var(--border-color)");
+  const focus = (key: keyof typeof errors) => (e: React.FocusEvent<HTMLInputElement>) => {
+    if (!errors[key]) e.target.style.borderColor = "var(--accent-primary)";
+  };
+  const blur = (key: keyof typeof errors) => (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.style.borderColor = errors[key] ? "var(--error)" : "var(--border-color)";
+  };
 
   return (
     <div
@@ -116,7 +140,7 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <form onSubmit={handleSubmit} noValidate style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
               <label style={{ display: "block", marginBottom: 5, fontSize: "0.82rem", fontWeight: 500, color: "var(--text-secondary)" }}>
@@ -128,10 +152,11 @@ export default function RegisterPage() {
                 onChange={set("first_name")}
                 placeholder="John"
                 autoComplete="given-name"
-                style={inputStyle}
-                onFocus={focus}
-                onBlur={blur}
+                style={{ ...inputStyle, ...(errors.first_name ? { borderColor: "var(--error)" } : {}) }}
+                onFocus={focus("first_name")}
+                onBlur={blur("first_name")}
               />
+              <FieldError msg={errors.first_name} />
             </div>
             <div>
               <label style={{ display: "block", marginBottom: 5, fontSize: "0.82rem", fontWeight: 500, color: "var(--text-secondary)" }}>
@@ -143,10 +168,11 @@ export default function RegisterPage() {
                 onChange={set("last_name")}
                 placeholder="Doe"
                 autoComplete="family-name"
-                style={inputStyle}
-                onFocus={focus}
-                onBlur={blur}
+                style={{ ...inputStyle, ...(errors.last_name ? { borderColor: "var(--error)" } : {}) }}
+                onFocus={focus("last_name")}
+                onBlur={blur("last_name")}
               />
+              <FieldError msg={errors.last_name} />
             </div>
           </div>
 
@@ -160,10 +186,11 @@ export default function RegisterPage() {
               onChange={set("email")}
               placeholder="you@example.com"
               autoComplete="email"
-              style={inputStyle}
-              onFocus={focus}
-              onBlur={blur}
+              style={{ ...inputStyle, ...(errors.email ? { borderColor: "var(--error)" } : {}) }}
+              onFocus={focus("email")}
+              onBlur={blur("email")}
             />
+            <FieldError msg={errors.email} />
           </div>
 
           <div>
@@ -177,9 +204,9 @@ export default function RegisterPage() {
                 onChange={set("password1")}
                 placeholder="At least 8 characters"
                 autoComplete="new-password"
-                style={{ ...inputStyle, paddingRight: 44 }}
-                onFocus={focus}
-                onBlur={blur}
+                style={{ ...inputStyle, paddingRight: 44, ...(errors.password1 ? { borderColor: "var(--error)" } : {}) }}
+                onFocus={focus("password1")}
+                onBlur={blur("password1")}
               />
               <button
                 type="button"
@@ -199,6 +226,7 @@ export default function RegisterPage() {
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
+            <FieldError msg={errors.password1} />
           </div>
 
           <div>
@@ -211,10 +239,11 @@ export default function RegisterPage() {
               onChange={set("password2")}
               placeholder="Repeat password"
               autoComplete="new-password"
-              style={inputStyle}
-              onFocus={focus}
-              onBlur={blur}
+              style={{ ...inputStyle, ...(errors.password2 ? { borderColor: "var(--error)" } : {}) }}
+              onFocus={focus("password2")}
+              onBlur={blur("password2")}
             />
+            <FieldError msg={errors.password2} />
           </div>
 
           <button
